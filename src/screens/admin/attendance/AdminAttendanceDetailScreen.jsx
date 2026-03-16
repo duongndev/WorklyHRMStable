@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -21,6 +21,7 @@ const AdminAttendanceDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { attendance: initialAttendance } = route.params;
+  const attendanceId = initialAttendance?.id;
   
   const [attendance, setAttendance] = useState(initialAttendance);
   const [loading, setLoading] = useState(false);
@@ -31,14 +32,10 @@ const AdminAttendanceDetailScreen = () => {
     note: '',
   });
 
-  useEffect(() => {
-    fetchAttendanceDetail();
-  }, []);
-
-  const fetchAttendanceDetail = async () => {
+  const fetchAttendanceDetail = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getAttendanceDetailApi(attendance.id);
+      const response = await getAttendanceDetailApi(attendanceId);
       if (response.success) {
         setAttendance(response.data);
         setEditData({
@@ -52,7 +49,11 @@ const AdminAttendanceDetailScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [attendanceId]);
+
+  useEffect(() => {
+    fetchAttendanceDetail();
+  }, [fetchAttendanceDetail]);
 
   const handleUpdateAttendance = async () => {
     setLoading(true);

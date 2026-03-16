@@ -38,7 +38,11 @@ const leaveSlice = createSlice({
       })
       .addCase(getLeaveRequests.fulfilled, (state, action) => {
         state.loading = false;
-        state.leaveList = action.payload.data.leaveList;
+        if (action.meta.arg.page > 1) {
+          state.leaveList = [...state.leaveList, ...action.payload.data.leaveList];
+        } else {
+          state.leaveList = action.payload.data.leaveList;
+        }
         state.pagination = action.payload.pagination;
         state.message = action.payload.message;
         state.error = null;
@@ -105,6 +109,12 @@ const leaveSlice = createSlice({
         state.loading = false;
         state.message = action.payload.message;
         state.error = null;
+        // Remove the deleted leave request from the list
+        if (state.leaveList) {
+          state.leaveList = state.leaveList.filter(
+            item => item._id !== action.payload.data.leaveId
+          );
+        }
       })
       .addCase(deleteLeaveRequest.rejected, (state, action) => {
         state.loading = false;

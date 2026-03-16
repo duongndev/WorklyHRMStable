@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -21,7 +21,6 @@ import { formatDateTime } from '../../../utils/formatDateTime';
 const AdminAttendanceScreen = () => {
   const navigation = useNavigation();
   const [attendanceList, setAttendanceList] = useState([]);
-  const [filteredAttendance, setFilteredAttendance] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -29,6 +28,7 @@ const AdminAttendanceScreen = () => {
   const [selectedDate, setSelectedDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const isFetchingRef = useRef(false);
 
   const statusOptions = [
     { label: 'Tất cả', value: 'all' },
@@ -38,17 +38,9 @@ const AdminAttendanceScreen = () => {
     { label: 'Vắng mặt', value: 'absent' },
   ];
 
-  useEffect(() => {
-    fetchAttendance();
-  }, [selectedStatus, selectedDate]);
-
-  useEffect(() => {
-    filterAttendance();
-  }, [searchText, attendanceList]);
-
-  const fetchAttendance = async (page = 1, isRefresh = false) => {
-    if (loading) return;
-
+  const fetchAttendance = useCallback(async (page = 1, isRefresh = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setLoading(true);
     try {
       const response = await getAllAttendanceApi({
@@ -59,8 +51,11 @@ const AdminAttendanceScreen = () => {
       });
 
       if (response.success) {
-        const newAttendance = isRefresh ? response.data.attendance : [...attendanceList, ...response.data.attendance];
-        setAttendanceList(newAttendance);
+        setAttendanceList(prev =>
+          isRefresh
+            ? response.data.attendance
+            : [...prev, ...response.data.attendance],
+        );
         setHasMore(response.data.hasMore);
         setCurrentPage(page);
       }
@@ -69,20 +64,26 @@ const AdminAttendanceScreen = () => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      isFetchingRef.current = false;
     }
-  };
+  }, [selectedDate, selectedStatus]);
 
-  const filterAttendance = () => {
+  useEffect(() => {
+    setCurrentPage(1);
+    setHasMore(true);
+    fetchAttendance(1, true);
+  }, [fetchAttendance]);
+
+  const filteredAttendance = useMemo(() => {
     if (!searchText.trim()) {
-      setFilteredAttendance(attendanceList);
-    } else {
-      const filtered = attendanceList.filter(item =>
-        item.employee.fullName.toLowerCase().includes(searchText.toLowerCase()) ||
-        item.employee.employeeId.toLowerCase().includes(searchText.toLowerCase())
-      );
-      setFilteredAttendance(filtered);
+      return attendanceList;
     }
-  };
+    const query = searchText.toLowerCase();
+    return attendanceList.filter(item =>
+      item.employee.fullName.toLowerCase().includes(query) ||
+      item.employee.employeeId.toLowerCase().includes(query),
+    );
+  }, [attendanceList, searchText]);
 
   const onRefresh = () => {
     setRefreshing(true);

@@ -3,7 +3,7 @@ import React from 'react';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {useDispatch} from 'react-redux';
 import {useNavigation} from '@react-navigation/native';
-import {logoutUser} from '../redux/auth/authAction';
+import {logoutUser} from '../redux/auth/authSlice';
 
 const HeaderHome = ({username, onNotificationPress, unreadCount = 0}) => {
   const dispatch = useDispatch();

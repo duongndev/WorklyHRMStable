@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -7,22 +7,35 @@ import {
   ScrollView,
   Modal,
   Platform,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import CustomTextInput from '../../components/CustomTextInput';
 import CustomButton from '../../components/CustomButton';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-const LeaveRequestFormModal = ({isModalVisible, onClose, onSubmit}) => {
-  const [reason, setReason] = useState('');
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date());
-  const [leaveType, setLeaveType] = useState(''); // Updated to store name
+const LeaveRequestFormModal = ({
+  isModalVisible,
+  onClose,
+  onSubmit,
+  leaveRequest,
+}) => {
+  const [reason, setReason] = useState(leaveRequest?.reason || '');
+  const [startDate, setStartDate] = useState(
+    leaveRequest?.startDate ? new Date(leaveRequest.startDate) : new Date(),
+  );
+  const [endDate, setEndDate] = useState(
+    leaveRequest?.endDate ? new Date(leaveRequest.endDate) : new Date(),
+  );
+  const [leaveType, setLeaveType] = useState(leaveRequest?.leaveType || '');
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
-  const [leaveDurationType, setLeaveDurationType] = useState('full_day');
-  const [startTime, setStartTime] = useState(new Date());
-  const [endTime, setEndTime] = useState(new Date());
+  const [leaveDurationType, setLeaveDurationType] = useState(
+    leaveRequest?.leaveDurationType || 'full_day',
+  );
+  // store times as strings like "08:30"
+  const [startTime, setStartTime] = useState(leaveRequest?.startTime || '');
+  const [endTime, setEndTime] = useState(leaveRequest?.endTime || '');
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
@@ -40,14 +53,35 @@ const LeaveRequestFormModal = ({isModalVisible, onClose, onSubmit}) => {
   ];
 
   const handleSubmit = () => {
+    // basic validations
+    if (!leaveType) {
+      Alert.alert('Lỗi', 'Vui lòng chọn loại nghỉ phép.');
+      return;
+    }
+
+    if (startDate > endDate) {
+      Alert.alert('Lỗi', 'Ngày bắt đầu không được sau ngày kết thúc.');
+      return;
+    }
+
     let formattedStartDate = startDate.toISOString().split('T')[0];
     let formattedEndDate = endDate.toISOString().split('T')[0];
     let formattedStartTime = null;
     let formattedEndTime = null;
 
     if (leaveDurationType === 'time_based') {
-      formattedStartTime = startTime.toTimeString().split(' ')[0].substring(0, 5);
-      formattedEndTime = endTime.toTimeString().split(' ')[0].substring(0, 5);
+      if (!startTime || !endTime) {
+        Alert.alert('Lỗi', 'Vui lòng chọn giờ bắt đầu và giờ kết thúc.');
+        return;
+      }
+      const tStart = new Date(`2000-01-01T${startTime}`);
+      const tEnd = new Date(`2000-01-01T${endTime}`);
+      if (tEnd <= tStart) {
+        Alert.alert('Lỗi', 'Giờ kết thúc phải sau giờ bắt đầu.');
+        return;
+      }
+      formattedStartTime = startTime;
+      formattedEndTime = endTime;
     }
 
     const newRequest = {
@@ -59,36 +93,85 @@ const LeaveRequestFormModal = ({isModalVisible, onClose, onSubmit}) => {
       startTime: formattedStartTime,
       endTime: formattedEndTime,
     };
-    onSubmit(newRequest);
-    onClose();
+
+    if (leaveRequest?._id) {
+      onSubmit(leaveRequest._id, newRequest);
+      onClose();
+    } else {
+      onSubmit(newRequest);
+      onClose();
+    }
+
+    // reset local state
     setReason('');
     setLeaveType('');
     setStartDate(new Date());
     setEndDate(new Date());
     setLeaveDurationType('full_day');
-    setStartTime(new Date());
-    setEndTime(new Date());
+    setStartTime('');
+    setEndTime('');
   };
 
   const handleDateChange = (event, selectedDate, type) => {
     if (type === 'start') {
-      setShowStartPicker(Platform.OS === 'ios');
-      if (selectedDate) setStartDate(selectedDate);
+      setShowStartPicker(false);
+      if (selectedDate) {
+        setStartDate(selectedDate);
+      }
     } else if (type === 'end') {
-      setShowEndPicker(Platform.OS === 'ios');
-      if (selectedDate) setEndDate(selectedDate);
+      setShowEndPicker(false);
+      if (selectedDate) {
+        setEndDate(selectedDate);
+      }
     }
   };
 
-  const handleTimeChange = (event, selectedTime, type) => {
-    if (type === 'start') {
-      setShowStartTimePicker(Platform.OS === 'ios');
-      if (selectedTime) setStartTime(selectedTime);
-    } else if (type === 'end') {
-      setShowEndTimePicker(Platform.OS === 'ios');
-      if (selectedTime) setEndTime(selectedTime);
+  const handleStartTimeChange = (event, selectedTime) => {
+    setShowStartTimePicker(false);
+    if (selectedTime) {
+      setStartTime(
+        selectedTime.toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      );
     }
   };
+
+  const handleEndTimeChange = (event, selectedTime) => {
+    setShowEndTimePicker(false);
+    if (selectedTime) {
+      const newEndTime = selectedTime.toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const currentStartTime = new Date(`2000-01-01T${startTime}`);
+      const selectedEndDateTime = new Date(`2000-01-01T${newEndTime}`);
+
+      if (startTime && selectedEndDateTime <= currentStartTime) {
+        Alert.alert('Lỗi', 'Giờ kết thúc phải sau giờ bắt đầu.');
+        setEndTime('');
+      } else {
+        setEndTime(newEndTime);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (leaveRequest) {
+      setReason(leaveRequest.reason || '');
+      setStartDate(
+        leaveRequest.startDate ? new Date(leaveRequest.startDate) : new Date(),
+      );
+      setEndDate(
+        leaveRequest.endDate ? new Date(leaveRequest.endDate) : new Date(),
+      );
+      setLeaveType(leaveRequest.leaveType || '');
+      setLeaveDurationType(leaveRequest.leaveDurationType || 'full_day');
+      setStartTime(leaveRequest.startTime || '');
+      setEndTime(leaveRequest.endTime || '');
+    }
+  }, [leaveRequest]);
 
   return (
     <Modal
@@ -99,7 +182,11 @@ const LeaveRequestFormModal = ({isModalVisible, onClose, onSubmit}) => {
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Tạo yêu cầu nghỉ phép</Text>
+            <Text style={styles.modalTitle}>
+              {leaveRequest?._id
+                ? 'Chỉnh sửa yêu cầu nghỉ phép'
+                : 'Tạo yêu cầu nghỉ phép'}
+            </Text>
             <TouchableOpacity onPress={onClose}>
               <Icon name="close" size={24} color="#666666" />
             </TouchableOpacity>
@@ -137,13 +224,15 @@ const LeaveRequestFormModal = ({isModalVisible, onClose, onSubmit}) => {
                     key={option.id}
                     style={[
                       styles.leaveTypeButton,
-                      leaveDurationType === option.id && styles.leaveTypeButtonActive,
+                      leaveDurationType === option.id &&
+                        styles.leaveTypeButtonActive,
                     ]}
                     onPress={() => setLeaveDurationType(option.id)}>
                     <Text
                       style={[
                         styles.leaveTypeText,
-                        leaveDurationType === option.id && styles.leaveTypeTextActive,
+                        leaveDurationType === option.id &&
+                          styles.leaveTypeTextActive,
                       ]}>
                       {option.name}
                     </Text>
@@ -157,14 +246,16 @@ const LeaveRequestFormModal = ({isModalVisible, onClose, onSubmit}) => {
               placeholder="DD/MM/YYYY"
               value={startDate.toLocaleDateString('vi-VN')}
               onPress={() => setShowStartPicker(true)}
-              keyboardType={'numeric'}
+              editable={false}
             />
             {showStartPicker && (
               <DateTimePicker
                 value={startDate}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={(event, selectedDate) => handleDateChange(event, selectedDate, 'start')}
+                onChange={(event, selectedDate) =>
+                  handleDateChange(event, selectedDate, 'start')
+                }
               />
             )}
 
@@ -179,45 +270,59 @@ const LeaveRequestFormModal = ({isModalVisible, onClose, onSubmit}) => {
                 value={endDate}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={(event, selectedDate) => handleDateChange(event, selectedDate, 'end')}
+                onChange={(event, selectedDate) =>
+                  handleDateChange(event, selectedDate, 'end')
+                }
               />
             )}
 
             {leaveDurationType === 'time_based' && (
-              <View style={styles.timeInputContainer}>
-                <View style={styles.timeInputColumn}>
-                  <CustomTextInput
-                    label="Giờ bắt đầu"
-                    placeholder="HH:MM"
-                    value={startTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                    onPress={() => setShowStartTimePicker(true)}
-                  />
-                  {showStartTimePicker && (
-                    <DateTimePicker
-                      value={startTime}
-                      mode="time"
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={(event, selectedTime) => handleTimeChange(event, selectedTime, 'start')}
-                    />
-                  )}
+              <View style={styles.timeContainer}>
+                <CustomTextInput
+                  label="Giờ bắt đầu"
+                  placeholder="00:00"
+                  value={startTime}
+                  onPress={() => setShowStartTimePicker(true)}
+                  editable={false}
+                />
+
+                <View style={styles.separatorWrapper}>
+                  <Text style={styles.separatorText}>–</Text>
                 </View>
 
-                <View style={styles.timeInputColumn}>
-                  <CustomTextInput
-                    label="Giờ kết thúc"
-                    placeholder="HH:MM"
-                    value={endTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                    onPress={() => setShowEndTimePicker(true)}
+                <CustomTextInput
+                  label="Giờ kết thúc"
+                  placeholder="00:00"
+                  value={endTime}
+                  onPress={() => setShowEndTimePicker(true)}
+                  editable={false}
+                />
+
+                {showStartTimePicker && (
+                  <DateTimePicker
+                    value={
+                      startTime
+                        ? new Date(`2000-01-01T${startTime}`)
+                        : new Date()
+                    }
+                    mode="time"
+                    is24Hour={true}
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleStartTimeChange}
                   />
-                  {showEndTimePicker && (
-                    <DateTimePicker
-                      value={endTime}
-                      mode="time"
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={(event, selectedTime) => handleTimeChange(event, selectedTime, 'end')}
-                    />
-                  )}
-                </View>
+                )}
+
+                {showEndTimePicker && (
+                  <DateTimePicker
+                    value={
+                      endTime ? new Date(`2000-01-01T${endTime}`) : new Date()
+                    }
+                    mode="time"
+                    is24Hour={true}
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleEndTimeChange}
+                  />
+                )}
               </View>
             )}
 
@@ -308,11 +413,21 @@ const styles = StyleSheet.create({
   },
   timeInputContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
   },
   timeInputColumn: {
     width: '48%',
+  },
+  separatorWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 8,
+    marginTop: 10,
+  },
+  separatorText: {
+    color: '#666666',
+  },
+  timeContainer: {
+    flexDirection: 'row',
   },
 });
 

@@ -36,6 +36,7 @@ const AttendanceScreen = () => {
     loadingCheckIn,
     loadingCheckOut,
     loadingHistory,
+    pagination,
   } = useSelector(state => state.attendance);
 
   const [refreshing, setRefreshing] = useState(false);
@@ -53,7 +54,7 @@ const AttendanceScreen = () => {
 
   const addressFetchedRef = useRef(false);
 
-  const getAddressFromCoordinates = async (coords) => {
+  const getAddressFromCoordinates = useCallback(async coords => {
     try {
       const responseJson = await reverseGeocodeApi(coords.latitude, coords.longitude, 'vi');
       console.log(responseJson);
@@ -66,10 +67,10 @@ const AttendanceScreen = () => {
       console.log('Error getting address:', err);
       setAddressName('Lỗi khi lấy địa chỉ');
     }
-  };
+  }, []);
 
-  const getCurrentLocationOnce = useCallback(() => {
-    if (addressFetchedRef.current) {
+  const getCurrentLocation = useCallback((force = false) => {
+    if (!force && addressFetchedRef.current) {
       return;
     }
     setLocationLoading(true);
@@ -92,14 +93,14 @@ const AttendanceScreen = () => {
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
     );
-  }, []);
+  }, [getAddressFromCoordinates]);
 
   const requestLocationPermission = useCallback(async () => {
     if (Platform.OS === 'ios') {
       try {
         const granted = await Geolocation.requestAuthorization('whenInUse');
         if (granted === 'granted') {
-          getCurrentLocationOnce();
+          getCurrentLocation();
         } else {
           setLocationError('Quyền truy cập vị trí bị từ chối');
         }
@@ -120,7 +121,7 @@ const AttendanceScreen = () => {
           },
         );
         if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-          getCurrentLocationOnce();
+          getCurrentLocation();
         } else {
           setLocationError('Quyền truy cập vị trí bị từ chối');
         }
@@ -129,7 +130,7 @@ const AttendanceScreen = () => {
         setLocationError('Không thể lấy quyền truy cập vị trí');
       }
     }
-  }, [getCurrentLocationOnce]);
+  }, [getCurrentLocation]);
 
   useEffect(() => {
     const fetchAttendanceRecords = async () => {
@@ -158,13 +159,15 @@ const AttendanceScreen = () => {
         'Vui lòng đảm bảo GPS đã được bật và cho phép ứng dụng truy cập vị trí của bạn.',
         [
           { text: 'Hủy', style: 'cancel' },
-          { text: 'Thử lại', onPress: () => getCurrentLocationOnce() },
+          { text: 'Thử lại', onPress: () => getCurrentLocation(true) },
         ]
       );
       return;
     }
 
-    const resultAction = await dispatch(checkIn(currentPosition));
+    const resultAction = await dispatch(
+      checkIn({ ...currentPosition, addressName })
+    );
 
     if (checkIn.fulfilled.match(resultAction)) {
       Alert.alert('Thành công', 'Check in thành công!');
@@ -180,13 +183,15 @@ const AttendanceScreen = () => {
         'Vui lòng đảm bảo GPS đã được bật và cho phép ứng dụng truy cập vị trí của bạn.',
         [
           { text: 'Hủy', style: 'cancel' },
-          { text: 'Thử lại', onPress: () => getCurrentLocationOnce() },
+          { text: 'Thử lại', onPress: () => getCurrentLocation(true) },
         ]
       );
       return;
     }
 
-    const resultAction = await dispatch(checkOut(currentPosition));
+    const resultAction = await dispatch(
+      checkOut({ ...currentPosition, addressName })
+    );
 
     if (checkOut.fulfilled.match(resultAction)) {
       Alert.alert('Thành công', 'Check out thành công!');
@@ -209,6 +214,19 @@ const AttendanceScreen = () => {
       setRefreshing(false);
     }
   };
+
+  const handleLoadMore = async () => {
+    if (pagination && pagination.currentPage < pagination.totalPages && !loadingHistory) {
+      try {
+        const nextPage = pagination.currentPage + 1;
+        console.log('Loading more attendance records:', nextPage);
+        await dispatch(getAttendanceRecords({ page: nextPage, limit: 10 }));
+      } catch (err) {
+        console.error('Error loading more attendance records:', err);
+      }
+    }
+  };
+
 
   const renderAttendanceItem = ({ item, index }) => {
     if (!item || typeof item !== 'object') {
@@ -242,15 +260,25 @@ const AttendanceScreen = () => {
               <Text style={styles.locationTitle}>Địa điểm chấm công:</Text>
             </View>
             <Text style={styles.locationText}>
-              {location || 'Chưa có thông tin'}
+              {location}
             </Text>
           </View>
 
           {/* Vị trí hiện tại */}
           <View style={styles.locationSection}>
             <View style={styles.locationHeader}>
-              <Icon name="crosshairs-gps" size={24} color="#666" />
-              <Text style={styles.locationTitle}>Vị trí hiện tại:</Text>
+              <View style={styles.locationHeaderLeft}>
+                <Icon name="crosshairs-gps" size={24} color="#666" />
+                <Text style={styles.locationTitle}>Vị trí hiện tại:</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => getCurrentLocation(true)}
+                style={styles.refreshIconButton}
+                disabled={locationLoading}
+                accessibilityLabel="Cập nhật vị trí hiện tại"
+              >
+                <Icon name="refresh" size={18} color="#007AFF" />
+              </TouchableOpacity>
             </View>
 
             {locationLoading ? (
@@ -262,7 +290,7 @@ const AttendanceScreen = () => {
               <View style={styles.locationErrorContainer}>
                 <Icon name="alert-circle-outline" size={16} color="#FF3B30" />
                 <Text style={styles.locationErrorText}>{locationError}</Text>
-                <TouchableOpacity onPress={getCurrentLocationOnce} style={styles.retryButton}>
+                <TouchableOpacity onPress={() => getCurrentLocation(true)} style={styles.retryButton}>
                   <Text style={styles.retryText}>Thử lại</Text>
                 </TouchableOpacity>
               </View>
@@ -271,7 +299,7 @@ const AttendanceScreen = () => {
                 <Text style={styles.addressText}>{addressName}</Text>
               </View>
             ) : (
-              <TouchableOpacity onPress={getCurrentLocationOnce} style={styles.getLocationButton}>
+              <TouchableOpacity onPress={() => getCurrentLocation(true)} style={styles.getLocationButton}>
                 <Icon name="crosshairs-gps" size={16} color="#FFFFFF" />
                 <Text style={styles.getLocationText}>Lấy vị trí hiện tại</Text>
               </TouchableOpacity>
@@ -295,6 +323,13 @@ const AttendanceScreen = () => {
           removeClippedSubviews={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            loadingHistory && attendanceRecords.length > 0 ? (
+              <ActivityIndicator size="small" color="#007AFF" style={{ marginVertical: 10 }} />
+            ) : null
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -335,6 +370,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   locationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  locationHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -408,6 +447,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginLeft: 32,
     alignSelf: 'flex-start',
+  },
+  refreshIconButton: {
+    marginLeft: 8,
+    padding: 4,
+    borderRadius: 16,
   },
   getLocationText: {
     color: '#FFFFFF',

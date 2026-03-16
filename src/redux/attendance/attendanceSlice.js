@@ -66,6 +66,22 @@ const attendanceSlice = createSlice({
         state.currentAttendance.isCheckedOut = action.payload.data.isCheckedOut;
         state.currentAttendance.recordId = action.payload.data.id ?? null;
         state.currentAttendance.date = (action.payload.data.date || new Date().toISOString()).slice(0, 10);
+        // Cập nhật địa điểm chấm công từ response hoặc payload (chuẩn hoá chuỗi)
+        {
+          const respLoc = action.payload?.data?.location;
+          const metaAddr = action.meta?.arg?.addressName;
+          let normalized = state.currentAttendance.location;
+          if (typeof respLoc === 'string') {
+            normalized = respLoc;
+          } else if (respLoc && typeof respLoc === 'object') {
+            const lat = respLoc.lat ?? respLoc.latitude;
+            const lng = respLoc.lng ?? respLoc.longitude;
+            normalized = lat != null && lng != null ? `${lat}, ${lng}` : JSON.stringify(respLoc);
+          } else if (metaAddr) {
+            normalized = metaAddr;
+          }
+          state.currentAttendance.location = normalized;
+        }
         state.message = action.payload.message;
         state.error = null;
       })
@@ -84,6 +100,22 @@ const attendanceSlice = createSlice({
         state.currentAttendance.isCheckedIn = action.payload.data.isCheckedIn;
         state.currentAttendance.checkOutTime = action.payload.data.checkOutTime;
         state.currentAttendance.date = (action.payload.data.date || new Date().toISOString()).slice(0, 10);
+        // Cập nhật địa điểm chấm công ra từ response hoặc payload (chuẩn hoá chuỗi)
+        {
+          const respLoc = action.payload?.data?.location;
+          const metaAddr = action.meta?.arg?.addressName;
+          let normalized = state.currentAttendance.location;
+          if (typeof respLoc === 'string') {
+            normalized = respLoc;
+          } else if (respLoc && typeof respLoc === 'object') {
+            const lat = respLoc.lat ?? respLoc.latitude;
+            const lng = respLoc.lng ?? respLoc.longitude;
+            normalized = lat != null && lng != null ? `${lat}, ${lng}` : JSON.stringify(respLoc);
+          } else if (metaAddr) {
+            normalized = metaAddr;
+          }
+          state.currentAttendance.location = normalized;
+        }
         state.message = action.payload.message;
         state.error = null;
         // Reset current attendance after successful check out
@@ -102,11 +134,20 @@ const attendanceSlice = createSlice({
       })
       .addCase(getAttendanceRecords.fulfilled, (state, action) => {
         state.loadingHistory = false;
-        state.attendanceRecords =
+        const records =
           action.payload?.data?.attendanceRecords ||
           action.payload?.data ||
           [];
-        state.pagination = action.payload.pagination;
+        if (action.meta.arg.page > 1) {
+          state.attendanceRecords = [...state.attendanceRecords, ...records];
+        } else {
+          state.attendanceRecords = records;
+        }
+        state.pagination = action.payload.pagination || {
+          totalPages: 0,
+          currentPage: 0,
+          total: 0,
+        };
         state.message = action.payload.message;
         state.error = null;
       })
@@ -121,19 +162,39 @@ const attendanceSlice = createSlice({
       // Load persisted current attendance
       .addCase(loadCurrentAttendance.fulfilled, (state, action) => {
         if (action.payload?.data) {
+          const loaded = action.payload.data;
           state.currentAttendance = {
             ...state.currentAttendance,
-            ...action.payload.data,
+            ...loaded,
           };
+          // Chuẩn hoá location nếu từ storage là object {lat,lng}
+          const loc = loaded?.location;
+          if (typeof loc === 'string') {
+            state.currentAttendance.location = loc;
+          } else if (loc && typeof loc === 'object') {
+            const lat = loc.lat ?? loc.latitude;
+            const lng = loc.lng ?? loc.longitude;
+            state.currentAttendance.location = lat != null && lng != null ? `${lat}, ${lng}` : JSON.stringify(loc);
+          }
         }
       })
       // Sync attendance with server (overwrite local with server values)
       .addCase(syncAttendanceState.fulfilled, (state, action) => {
         if (action.payload?.data) {
+          const synced = action.payload.data;
           state.currentAttendance = {
             ...state.currentAttendance,
-            ...action.payload.data,
+            ...synced,
           };
+          // Chuẩn hoá location nếu server trả object
+          const loc = synced?.location;
+          if (typeof loc === 'string') {
+            state.currentAttendance.location = loc;
+          } else if (loc && typeof loc === 'object') {
+            const lat = loc.lat ?? loc.latitude;
+            const lng = loc.lng ?? loc.longitude;
+            state.currentAttendance.location = lat != null && lng != null ? `${lat}, ${lng}` : JSON.stringify(loc);
+          }
         }
       });
   },

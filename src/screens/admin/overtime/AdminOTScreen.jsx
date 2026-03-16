@@ -17,7 +17,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import ViewEmptyComponent from '../../../components/ViewEmptyComponent';
 import {
   getAllOvertimeRequests,
-} from '../../../redux/overtime/overtimeAction';
+} from '../../../redux/overtime/adminOvertimeAction';
 import {
   clearError,
   clearMessage,

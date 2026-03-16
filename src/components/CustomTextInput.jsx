@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 16,
     color: '#1A1A1A',

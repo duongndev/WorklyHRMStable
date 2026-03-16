@@ -13,7 +13,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
 import { clearError, clearMessage } from '../../../redux/auth/authSlice';
-import { logoutUser } from '../../../redux/auth/authAction';
+import { logoutUser } from '../../../redux/auth/authSlice';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();

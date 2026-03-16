@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -40,11 +40,7 @@ const AdminAttendanceReportScreen = () => {
     { label: 'Phòng Marketing', value: 'Marketing' },
   ];
 
-  useEffect(() => {
-    fetchReportData();
-  }, [selectedPeriod, selectedDepartment]);
-
-  const fetchReportData = async () => {
+  const fetchReportData = useCallback(async () => {
     setLoading(true);
     try {
       const response = await getAttendanceReportApi({
@@ -60,7 +56,11 @@ const AdminAttendanceReportScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDepartment, selectedPeriod]);
+
+  useEffect(() => {
+    fetchReportData();
+  }, [fetchReportData]);
 
   const handleExportReport = async () => {
     setLoading(true);

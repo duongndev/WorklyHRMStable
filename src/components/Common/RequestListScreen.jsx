@@ -68,7 +68,9 @@ const RequestListScreen = ({
 
   const data = useSelector(dataSelector);
   const loading = useSelector(loadingSelector);
-  const pagination = paginationSelector ? useSelector(paginationSelector) : null;
+  const pagination = useSelector(state =>
+    paginationSelector ? paginationSelector(state) : null,
+  );
 
   const handleItemPress = (item) => {
     if (onItemPress) {

@@ -22,7 +22,6 @@ import {
   getOvertimeRequests,
   createOvertimeRequest,
 } from '../../../redux/overtime/overtimeAction';
-import {clearError, clearMessage} from '../../../redux/overtime/overtimeSlice';
 
 const OvertimeRequestScreen = () => {
   const [isModalVisible, setModalVisible] = useState(false);
@@ -32,8 +31,6 @@ const OvertimeRequestScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const isLoading = useSelector(state => state.overtime.loading);
   const overtimeList = useSelector(state => state.overtime.overtimeList);
-  const err = useSelector(state => state.overtime.error);
-  const message = useSelector(state => state.overtime.message);
 
   const statusFilters = [
     {id: 'all', label: 'Tất cả'},
@@ -60,7 +57,7 @@ const OvertimeRequestScreen = () => {
       }
     };
     fetchOvertimeRequests();
-  }, [selectedStatus]); // Chỉ depend on selectedStatus
+  }, [dispatch, selectedStatus]); // Chỉ depend on selectedStatus
 
   const handleSubmit = async overtimeRequest => {
     const resultAction = await dispatch(createOvertimeRequest(overtimeRequest));
@@ -126,7 +123,7 @@ const OvertimeRequestScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <HeaderScreen title={'Xin làm thêm giờ'} />
+      <HeaderScreen title={'Yêu cầu OT'} />
       <StatusFilter
         statusFilters={statusFilters}
         selectedStatus={selectedStatus}

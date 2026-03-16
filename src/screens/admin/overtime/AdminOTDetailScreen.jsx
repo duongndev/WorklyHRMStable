@@ -20,7 +20,7 @@ import {
 import {
   getOTDetail,
   updateStatusOT,
-} from '../../../redux/overtime/overtimeAction';
+} from '../../../redux/overtime/adminOvertimeAction';
 import CustomButton from '../../../components/CustomButton';
 import AdminOTModal from '../../../screens/admin/overtime/AdminOTModal';
 

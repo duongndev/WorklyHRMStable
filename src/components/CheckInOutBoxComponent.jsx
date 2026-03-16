@@ -16,6 +16,16 @@ const CheckInOutBoxComponent = ({ checkInTime, checkOutTime, location }) => {
 
   const displayCheckIn = formatCurrentTime(checkInTime) || currentTime;
   const displayCheckOut = formatCurrentTime(checkOutTime) || currentTime;
+  const displayLocation = (() => {
+    if (typeof location === 'string') return location;
+    if (location && typeof location === 'object') {
+      const lat = location.lat ?? location.latitude;
+      const lng = location.lng ?? location.longitude;
+      if (lat != null && lng != null) return `${lat}, ${lng}`;
+      try { return JSON.stringify(location); } catch { return '—'; }
+    }
+    return '';
+  })();
 
   return (
     <>
@@ -41,7 +51,7 @@ const CheckInOutBoxComponent = ({ checkInTime, checkOutTime, location }) => {
 
         <Text style={styles.location}>
           ✅ Địa điểm được phép checkin{'\n'}
-          <Text style={styles.textLocation}>{location}</Text>
+          <Text style={styles.textLocation}>{displayLocation || '—'}</Text>
         </Text>
       </View>
     </>

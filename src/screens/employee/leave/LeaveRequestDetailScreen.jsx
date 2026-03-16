@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -9,22 +9,38 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import HeaderScreen from '../../../components/HeaderScreen';
-import { getStatusText, getStatusColor } from '../../../utils/statusUtils';
-import { formatDate, formatTime } from '../../../utils/formatDateTime';
-import { useSelector, useDispatch } from 'react-redux';
-import {
-  clearError,
-  clearMessage,
-} from '../../../redux/leave/leaveSlice';
-import {
-  getLeaveRequestDetail,
-} from '../../../redux/leave/leaveAction';
+import {getStatusText, getStatusColor} from '../../../utils/statusUtils';
+import {formatDate, formatTime} from '../../../utils/formatDateTime';
+import {useSelector, useDispatch} from 'react-redux';
+import {clearError, clearMessage} from '../../../redux/leave/leaveSlice';
+import {getLeaveRequestDetail, deleteLeaveRequest} from '../../../redux/leave/leaveAction';
 import CustomButton from '../../../components/CustomButton';
+import {useNavigation} from '@react-navigation/native';
+import LeaveRequestFormModal from '../../../components/LeaveRequest/LeaveRequestFormModal';
+import CancelModalComponent from '../../../components/CancelModelComponent';
 
-const LeaveRequestDetailScreen = ({ route }) => {
-  const { leaveRequest } = route.params;
+const LeaveRequestDetailScreen = ({route}) => {
+  const {leaveRequest} = route.params;
   const dispatch = useDispatch();
-  const { leaveDetail, loading, error } = useSelector(state => state.leave);
+  const {leaveDetail, loading, error} = useSelector(state => state.leave);
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [isCancelModalVisible, setCancelModalVisible] = useState(false);
+  const navigation = useNavigation();
+
+  const handleCancel = async () => {
+    try {
+      const resultAction = await dispatch(deleteLeaveRequest(leaveRequest));
+      if (deleteLeaveRequest.fulfilled.match(resultAction)) {
+        console.log('Cancel leave request success');
+        setCancelModalVisible(false);
+        navigation.goBack();
+      } else {
+        console.error('Cancel leave request failed:', resultAction.payload?.message);
+      }
+    } catch (err) {
+      console.error('Cancel leave request error:', err);
+    }
+  };
 
   useEffect(() => {
     const fetchLeaveRequestDetail = async () => {
@@ -34,12 +50,17 @@ const LeaveRequestDetailScreen = ({ route }) => {
         dispatch(clearMessage());
 
         console.log('Fetching leave request detail for ID:', leaveRequest);
-        const resultAction = await dispatch(getLeaveRequestDetail(leaveRequest));
+        const resultAction = await dispatch(
+          getLeaveRequestDetail(leaveRequest),
+        );
 
         if (getLeaveRequestDetail.fulfilled.match(resultAction)) {
           console.log('Fetch leave request detail successful');
         } else if (getLeaveRequestDetail.rejected.match(resultAction)) {
-          console.error('Fetch leave request detail failed:', resultAction.payload?.message);
+          console.error(
+            'Fetch leave request detail failed:',
+            resultAction.payload?.message,
+          );
         }
       } catch (err) {
         console.error('Fetch leave request detail error:', err);
@@ -161,18 +182,37 @@ const LeaveRequestDetailScreen = ({ route }) => {
                 title="Hủy"
                 style={styles.button}
                 onPress={() => {
-                  // Handle cancel leave request
+                  setCancelModalVisible(true);
                 }}
               />
               <CustomButton
                 title="Cập nhật"
                 style={styles.button}
                 onPress={() => {
-                  // Handle cancel leave request
+                  setModalVisible(true);
                 }}
               />
             </View>
           )}
+
+          <LeaveRequestFormModal
+            isModalVisible={isModalVisible}
+            onClose={() => setModalVisible(false)}
+            leaveRequest={leaveDetail}
+            onSubmit={() => {
+              setModalVisible(false);
+            }}
+          />
+          <CancelModalComponent
+            title="Hủy yêu cầu nghỉ phép"
+            message="Bạn có chắc chắn muốn hủy yêu cầu nghỉ phép?"
+            isVisible={isCancelModalVisible}
+            onCancel={() => setCancelModalVisible(false)}
+            onConfirm={() => {
+              handleCancel(leaveDetail._id);
+              setCancelModalVisible(false);
+            }}
+          />
         </ScrollView>
       </SafeAreaView>
     );
@@ -195,7 +235,9 @@ const LeaveRequestDetailScreen = ({ route }) => {
         renderView()
       ) : (
         <View style={styles.loadingContainer}>
-          <Text style={styles.errorText}>Không tìm thấy thông tin yêu cầu nghỉ phép</Text>
+          <Text style={styles.errorText}>
+            Không tìm thấy thông tin yêu cầu nghỉ phép
+          </Text>
         </View>
       )}
     </>

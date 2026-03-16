@@ -5,10 +5,12 @@ import {
   createOvertimeRequest,
   updateOvertimeRequest,
   cancelOvertimeRequest,
+} from './overtimeAction';
+import {
   getAllOvertimeRequests,
   getOTDetail,
   updateStatusOT,
-} from './overtimeAction';
+} from './adminOvertimeAction';
 
 const initialState = {
   overtimeList: [],
@@ -36,6 +38,9 @@ const overtimeSlice = createSlice({
     resetOvertimeDetail: state => {
       state.overtimeDetail = {};
     },
+    resetOvertimeList: state => {
+      state.overtimeList = [];
+    },
   },
   extraReducers: builder => {
     // Employee overtime requests cases
@@ -46,7 +51,11 @@ const overtimeSlice = createSlice({
       })
       .addCase(getOvertimeRequests.fulfilled, (state, action) => {
         state.loading = false;
-        state.overtimeList = action.payload.data.overtimeList;
+        if (action.meta.arg.page > 1) {
+          state.overtimeList = [...state.overtimeList, ...action.payload.data.overtimeList];
+        } else {
+          state.overtimeList = action.payload.data.overtimeList;
+        }
         state.pagination = action.payload.pagination;
         state.message = action.payload.message;
         state.error = null;
@@ -123,8 +132,14 @@ const overtimeSlice = createSlice({
       })
       .addCase(cancelOvertimeRequest.fulfilled, (state, action) => {
         state.loading = false;
-        state.message = action.payload.message;
+        state.message = action.payload?.message || 'Yêu cầu làm thêm giờ đã được hủy thành công';
         state.error = null;
+        // Remove the cancelled overtime request from the list
+        if (state.overtimeList) {
+          state.overtimeList = state.overtimeList.filter(
+            item => item._id !== action.payload.data.overtimeId
+          );
+        }
       })
       .addCase(cancelOvertimeRequest.rejected, (state, action) => {
         state.loading = false;
@@ -198,7 +213,7 @@ const overtimeSlice = createSlice({
   },
 });
 
-export const {clearError, clearMessage, resetOvertimeDetail} =
+export const {clearError, clearMessage, resetOvertimeDetail, resetOvertimeList} =
   overtimeSlice.actions;
 
 export default overtimeSlice.reducer;

@@ -164,8 +164,8 @@ export const updateStatusLeaveRequest = createAsyncThunk(
 );
 
 // Async thunk cho việc xóa leave request
-export const deleteLeaveRequest = createAsyncThunk(
-  'leave/deleteLeaveRequest',
+export const cancelLeaveRequest = createAsyncThunk(
+  'leave/cancelLeaveRequest',
   async (leaveId, {rejectWithValue}) => {
     try {
       const response = await cancelLeaveRequestApi(leaveId);

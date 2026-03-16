@@ -111,7 +111,7 @@ const LeaveRequestScreen = () => {
     };
 
     fetchLeaveRequests();
-  }, [selectedStatus]); // Chỉ depend on selectedStatus
+  }, [dispatch, selectedStatus]); // Chỉ depend on selectedStatus
 
   const handleRefresh = async () => {
     try {

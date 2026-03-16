@@ -4,7 +4,7 @@ import {useNavigation} from '@react-navigation/native';
 import {useDispatch, useSelector} from 'react-redux';
 import {isTokenExpired} from '../utils/tokenUtils';
 import {logout, clearError, clearMessage} from '../redux/auth/authSlice';
-import {getUserInfo} from '../redux/auth/authAction';
+import {getUserInfo} from '../redux/auth/authSlice';
 
 const SplashScreen = () => {
   const {token, user, loading, error} = useSelector(state => state.auth);

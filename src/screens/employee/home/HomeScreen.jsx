@@ -52,7 +52,7 @@ const HomeScreen = () => {
       }
     };
     fetchDailySchedules();
-  }, []); // Chỉ chạy một lần khi mount
+  }, [dailySchedules, dispatch]); // Chỉ chạy một lần khi mount
 
   // get notification count - chỉ gọi một lần khi component mount
   useEffect(() => {
@@ -67,7 +67,7 @@ const HomeScreen = () => {
       }
     };
     fetchNotificationCount();
-  }, []); // Chỉ chạy một lần khi mount
+  }, [dispatch, notificationCount]); // Chỉ chạy một lần khi mount
 
   const navToOT = () => {
     navigation.navigate('OvertimeRequest');

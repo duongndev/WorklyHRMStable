@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -20,6 +20,7 @@ const AdminEmployeeDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { employee: initialEmployee } = route.params;
+  const employeeId = initialEmployee?.id;
   
   const [employee, setEmployee] = useState(initialEmployee);
   const [loading, setLoading] = useState(false);
@@ -33,14 +34,10 @@ const AdminEmployeeDetailScreen = () => {
     { value: 'suspended', label: 'Tạm dừng', color: '#FF9800' },
   ];
 
-  useEffect(() => {
-    fetchEmployeeDetail();
-  }, []);
-
-  const fetchEmployeeDetail = async () => {
+  const fetchEmployeeDetail = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getEmployeeDetailApi(employee.id);
+      const response = await getEmployeeDetailApi(employeeId);
       if (response.success) {
         setEmployee(response.data);
       }
@@ -49,7 +46,11 @@ const AdminEmployeeDetailScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [employeeId]);
+
+  useEffect(() => {
+    fetchEmployeeDetail();
+  }, [fetchEmployeeDetail]);
 
   const handleUpdateStatus = async () => {
     if (selectedStatus === employee.status) {

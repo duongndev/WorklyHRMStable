@@ -18,6 +18,17 @@ export const checkIn = createAsyncThunk(
         try {
           const dateIso = response.data.date || new Date().toISOString();
           const dateKey = dateIso.slice(0, 10);
+          // Chuẩn hoá giá trị location thành chuỗi để tránh render object
+          const respLoc = response.data.location;
+          const normalizedLoc = typeof respLoc === 'string'
+            ? respLoc
+            : respLoc && typeof respLoc === 'object'
+              ? (() => {
+                  const lat = respLoc.lat ?? respLoc.latitude;
+                  const lng = respLoc.lng ?? respLoc.longitude;
+                  return lat != null && lng != null ? `${lat}, ${lng}` : JSON.stringify(respLoc);
+                })()
+              : (checkInData?.addressName || '');
           const stateObj = {
             date: dateKey,
             isCheckedIn: true,
@@ -25,6 +36,7 @@ export const checkIn = createAsyncThunk(
             checkInTime: response.data.checkInTime ?? null,
             checkOutTime: null,
             recordId: response.data.id ?? null,
+            location: normalizedLoc,
           };
           await AsyncStorage.setItem(`ATT_STATE_${dateKey}`, JSON.stringify(stateObj));
           await AsyncStorage.setItem('ATT_STATE_TODAY', dateKey);
@@ -73,6 +85,17 @@ export const checkOut = createAsyncThunk(
           const current = state?.attendance?.currentAttendance || {};
           const dateIso = response.data.date || new Date().toISOString();
           const dateKey = dateIso.slice(0, 10);
+          // Chuẩn hoá giá trị location thành chuỗi để tránh render object
+          const respLoc = response.data.location;
+          const normalizedLoc = typeof respLoc === 'string'
+            ? respLoc
+            : respLoc && typeof respLoc === 'object'
+              ? (() => {
+                  const lat = respLoc.lat ?? respLoc.latitude;
+                  const lng = respLoc.lng ?? respLoc.longitude;
+                  return lat != null && lng != null ? `${lat}, ${lng}` : JSON.stringify(respLoc);
+                })()
+              : (checkOutData?.addressName || current.location || '');
           const stateObj = {
             date: dateKey,
             isCheckedIn: false,
@@ -80,6 +103,7 @@ export const checkOut = createAsyncThunk(
             checkInTime: current.checkInTime || null,
             checkOutTime: response.data.checkOutTime ?? null,
             recordId: response.data.id ?? current.recordId ?? null,
+            location: normalizedLoc,
           };
           await AsyncStorage.setItem(`ATT_STATE_${dateKey}`, JSON.stringify(stateObj));
           await AsyncStorage.setItem('ATT_STATE_TODAY', dateKey);

@@ -1,13 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './src/navigation/RootNavigator';
+import { store } from './src/redux/store';
 import { Provider } from 'react-redux';
-import { store, persistor } from './src/redux/store';
-import { PersistGate } from 'redux-persist/integration/react';
 import { StatusBar } from 'react-native';
 import { getApp } from '@react-native-firebase/app';
 import messaging, { getMessaging } from '@react-native-firebase/messaging';
-import { getFCMTokenFromStorage, saveFCMToken } from './src/utils/tokenUtils';
+import { saveFCMToken } from './src/utils/tokenUtils';
 import { updateFCMTokenApi } from './src/services/ApiService';
 import {
   Toast,
@@ -19,36 +18,17 @@ import { navigate } from './src/navigation/NavigationService';
 import useStartupPermissions from './src/hooks/useStartupPermissions';
 
 const App = () => {
-  const app = getApp();
-  const messagingInstance = getMessaging(app);
+  const messagingInstance = useMemo(() => getMessaging(getApp()), []);
 
-  const updateFCMTokenOnServer = async token => {
+  const updateFCMTokenOnServer = useCallback(async token => {
     try {
       await updateFCMTokenApi(token);
     } catch (error) {
       console.log('Error updating FCM token on server:', error);
     }
-  };
+  }, []);
 
-  const requestUserPermission = async () => {
-    const authStatus = await messagingInstance.requestPermission();
-    const enabled =
-      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-
-    if (enabled) {
-      console.log('Authorization status:', authStatus);
-      getFCMToken();
-    } else {
-      Dialog.show({
-        title: 'Thông báo',
-        textBody: 'Hãy bật quyền thông báo để nhận tin từ hệ thống',
-        buttonPositive: { text: 'OK' },
-      });
-    }
-  };
-
-  const getFCMToken = async () => {
+  const getFCMToken = useCallback(async () => {
     try {
       const fcmToken = await messagingInstance.getToken();
       if (fcmToken) {
@@ -64,7 +44,25 @@ const App = () => {
     } catch (error) {
       console.log('Error getting FCM Token: ', error);
     }
-  };
+  }, [messagingInstance, updateFCMTokenOnServer]);
+
+  const requestUserPermission = useCallback(async () => {
+    const authStatus = await messagingInstance.requestPermission();
+    const enabled =
+      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+    if (enabled) {
+      console.log('Authorization status:', authStatus);
+      getFCMToken();
+    } else {
+      Dialog.show({
+        title: 'Thông báo',
+        textBody: 'Hãy bật quyền thông báo để nhận tin từ hệ thống',
+        buttonPositive: { text: 'OK' },
+      });
+    }
+  }, [getFCMToken, messagingInstance]);
 
   useEffect(() => {
     // Chỉ setup FCM một lần khi app khởi động
@@ -101,24 +99,22 @@ const App = () => {
     });
 
     return unsubscribe;
-  }, []); // Chỉ chạy một lần khi app mount
+  }, [messagingInstance, requestUserPermission]);
 
   // Request location + notification permissions at startup
   useStartupPermissions();
 
   return (
     <SafeAreaProvider>
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle="dark-content"
-      />
       <Provider store={store}>
-        <PersistGate loading={null} persistor={persistor}>
-          <AlertNotificationRoot>
-            <RootNavigator />
-          </AlertNotificationRoot>
-        </PersistGate>
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle="dark-content"
+        />
+        <AlertNotificationRoot>
+          <RootNavigator />
+        </AlertNotificationRoot>
       </Provider>
     </SafeAreaProvider>
   );

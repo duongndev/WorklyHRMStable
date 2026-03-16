@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,14 +9,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import HeaderScreen from '../../../components/HeaderScreen';
-import {getStatusText} from '../../../utils/statusUtils';
-import {formatDate, formatTime} from '../../../utils/formatDateTime';
-import {useSelector, useDispatch} from 'react-redux';
-import {
-  clearError,
-  clearMessage,
-  resetOvertimeDetail,
-} from '../../../redux/overtime/overtimeSlice';
+import { getStatusText } from '../../../utils/statusUtils';
+import { formatDate, formatTime } from '../../../utils/formatDateTime';
+import { Provider, ReactReduxContext, useSelector, useDispatch } from 'react-redux';
 import {
   getOvertimeRequestDetail,
   updateOvertimeRequest,
@@ -24,18 +19,28 @@ import {
 } from '../../../redux/overtime/overtimeAction';
 import CustomButton from '../../../components/CustomButton';
 import OvertimeRequestFormModal from '../../../components/OvertimeRequest/OvertimeRequestFormModal';
+import { useNavigation } from '@react-navigation/native';
+import CancelModalComponent from '../../../components/CancelModelComponent';
+import { store } from '../../../redux/store';
 
-const OvertimeRequestDetailScreen = ({route}) => {
-  const {overtimeRequest} = route.params;
+const OvertimeRequestDetailScreenInner = ({ route }) => {
+  const navigation = useNavigation();
+  const overtimeRequest = route?.params?.overtimeRequest;
   const dispatch = useDispatch();
   const overtimeDetail = useSelector(state => state.overtime.overtimeDetail);
   const loading = useSelector(state => state.overtime.loading);
   const [isModalVisible, setModalVisible] = useState(false);
+  const [isCancelModalVisible, setCancelModalVisible] = useState(false);
+
+  const overtimeRequestId = overtimeRequest?._id;
 
   useEffect(() => {
+    if (!overtimeRequestId) {
+      return;
+    }
     const fetchOvertimeRequestDetail = async () => {
       const resultAction = await dispatch(
-        getOvertimeRequestDetail(overtimeRequest._id),
+        getOvertimeRequestDetail(overtimeRequestId),
       );
 
       if (getOvertimeRequestDetail.rejected.match(resultAction)) {
@@ -47,7 +52,7 @@ const OvertimeRequestDetailScreen = ({route}) => {
     };
 
     fetchOvertimeRequestDetail();
-  }, [dispatch, overtimeRequest._id]);
+  }, [dispatch, overtimeRequestId]);
 
   const handleSubmit = async (id, overtimeRequestUpdate) => {
     const resultAction = await dispatch(
@@ -63,7 +68,9 @@ const OvertimeRequestDetailScreen = ({route}) => {
         resultAction.payload.message,
       );
       // Refresh the detail
-      dispatch(getOvertimeRequestDetail(overtimeRequest._id));
+      if (overtimeRequestId) {
+        dispatch(getOvertimeRequestDetail(overtimeRequestId));
+      }
     } else if (updateOvertimeRequest.rejected.match(resultAction)) {
       console.error(
         'Failed to update overtime request:',
@@ -73,21 +80,24 @@ const OvertimeRequestDetailScreen = ({route}) => {
     setModalVisible(false);
   };
 
-  const handleCancel = async id => {
+  const handleCancel = async (id) => {
     const resultAction = await dispatch(cancelOvertimeRequest(id));
+    console.log(resultAction);
 
     if (cancelOvertimeRequest.fulfilled.match(resultAction)) {
       console.log(
         'Overtime request cancelled successfully:',
         resultAction.payload.message,
       );
-      // Navigate back or refresh
+      // dispatch(resetOvertimeList());
+      navigation.goBack();
     } else if (cancelOvertimeRequest.rejected.match(resultAction)) {
-      console.error(
+      console.log(
         'Failed to cancel overtime request:',
         resultAction.payload?.message,
       );
     }
+    // navigation.goBack();
   };
 
   const renderDetail = () => {
@@ -111,6 +121,7 @@ const OvertimeRequestDetailScreen = ({route}) => {
             <View style={styles.detailRow}>
               <Text style={styles.label}>Giờ bắt đầu:</Text>
               <Text style={styles.value}>{overtimeDetail.startTime}</Text>
+              <View style={styles.timeSeparator} />
               <Text style={styles.label}>Giờ kết thúc:</Text>
               <Text style={styles.value}>{overtimeDetail.endTime}</Text>
             </View>
@@ -171,7 +182,7 @@ const OvertimeRequestDetailScreen = ({route}) => {
                 title="Hủy"
                 style={styles.button}
                 onPress={() => {
-                  // Handle cancel overtime request
+                  setCancelModalVisible(true);
                 }}
               />
               <CustomButton
@@ -190,6 +201,18 @@ const OvertimeRequestDetailScreen = ({route}) => {
           onClose={() => setModalVisible(false)}
           overtimeRequest={overtimeRequest}
           onSubmit={handleSubmit}
+        />
+        <CancelModalComponent
+          title="Hủy yêu cầu OT"
+          message="Bạn có chắc chắn muốn hủy yêu cầu OT?"
+          isVisible={isCancelModalVisible}
+          onCancel={() => setCancelModalVisible(false)}
+          onConfirm={() => {
+            if (overtimeDetail?._id) {
+              handleCancel(overtimeDetail._id);
+            }
+            setCancelModalVisible(false);
+          }}
         />
       </SafeAreaView>
     );
@@ -210,10 +233,21 @@ const OvertimeRequestDetailScreen = ({route}) => {
   );
 };
 
+const OvertimeRequestDetailScreen = (props) => {
+  const reduxContext = React.useContext(ReactReduxContext);
+  const hasStore = Boolean(reduxContext && reduxContext.store);
+  const content = useMemo(() => <OvertimeRequestDetailScreenInner {...props} />, [props]);
+
+  if (hasStore) {
+    return content;
+  }
+
+  return <Provider store={store}>{content}</Provider>;
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F6FA',
   },
   scrollContent: {
     flexGrow: 1,
@@ -291,6 +325,9 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     marginHorizontal: 8,
+  },
+  timeSeparator: {
+    width: 16,
   },
 });
 

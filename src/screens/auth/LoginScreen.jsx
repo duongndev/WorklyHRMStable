@@ -10,7 +10,7 @@ import {
 import CustomTextInput from '../../components/CustomTextInput';
 import CustomButton from '../../components/CustomButton';
 import { useDispatch, useSelector } from 'react-redux';
-import { loginUser } from '../../redux/auth/authAction';
+import { loginUser } from '../../redux/auth/authSlice';
 import { updateFCMTokenApi } from '../../services/ApiService';
 import { getFCMTokenFromStorage } from '../../utils/tokenUtils';
 import { navigateBasedOnRole } from '../../utils/navigationHelpers';

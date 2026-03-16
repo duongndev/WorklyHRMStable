@@ -35,8 +35,13 @@ export const navigateBasedOnRole = (navigation, userRole, onUnknownRole) => {
  * @param {Object} params - Parameters để truyền
  * @param {string} paramKey - Key của parameter chính (default: 'item')
  */
-export const navigateToDetail = (navigation, screenName, params, paramKey = 'item') => {
-  navigation.navigate(screenName, { [paramKey]: params });
+export const navigateToDetail = (
+  navigation,
+  screenName,
+  params,
+  paramKey = 'item',
+) => {
+  navigation.navigate(screenName, {[paramKey]: params});
 };
 
 /**
@@ -45,12 +50,16 @@ export const navigateToDetail = (navigation, screenName, params, paramKey = 'ite
  * @param {Object} leaveRequest - Leave request object
  * @param {boolean} isAdmin - Có phải admin screen không
  */
-export const navigateToLeaveDetail = (navigation, leaveRequest, isAdmin = false) => {
+export const navigateToLeaveDetail = (
+  navigation,
+  leaveRequest,
+  isAdmin = false,
+) => {
   const screenName = isAdmin ? 'AdminLeaveDetailScreen' : 'LeaveRequestDetail';
   const paramKey = isAdmin ? 'leaveRequest' : 'leaveRequest';
   const paramValue = isAdmin ? leaveRequest : leaveRequest._id;
-  
-  navigation.navigate(screenName, { [paramKey]: paramValue });
+
+  navigation.navigate(screenName, {[paramKey]: paramValue});
 };
 
 /**
@@ -59,11 +68,15 @@ export const navigateToLeaveDetail = (navigation, leaveRequest, isAdmin = false)
  * @param {Object} overtimeRequest - Overtime request object
  * @param {boolean} isAdmin - Có phải admin screen không
  */
-export const navigateToOvertimeDetail = (navigation, overtimeRequest, isAdmin = false) => {
+export const navigateToOvertimeDetail = (
+  navigation,
+  overtimeRequest,
+  isAdmin = false,
+) => {
   const screenName = isAdmin ? 'AdminDetailOTScreen' : 'OvertimeRequestDetail';
   const paramKey = 'overtimeRequest';
-  
-  navigation.navigate(screenName, { [paramKey]: overtimeRequest });
+
+  navigation.navigate(screenName, {[paramKey]: overtimeRequest});
 };
 
 /**
@@ -98,7 +111,7 @@ export const navigateBack = (navigation, fallbackScreen = null) => {
 export const resetAndNavigate = (navigation, screenName, params = {}) => {
   navigation.reset({
     index: 0,
-    routes: [{ name: screenName, params }],
+    routes: [{name: screenName, params}],
   });
 };
 
@@ -109,7 +122,12 @@ export const resetAndNavigate = (navigation, screenName, params = {}) => {
  * @param {Object} params - Parameters (optional)
  * @param {Object} options - Navigation options (optional)
  */
-export const navigateWithOptions = (navigation, screenName, params = {}, options = {}) => {
+export const navigateWithOptions = (
+  navigation,
+  screenName,
+  params = {},
+  options = {},
+) => {
   navigation.navigate(screenName, params, options);
 };
 
@@ -118,22 +136,23 @@ export const navigateWithOptions = (navigation, screenName, params = {}, options
  */
 export const FeatureNavigation = {
   // Employee features
-  toAttendance: (navigation) => navigation.navigate('Attendance'),
-  toLeaveRequest: (navigation) => navigation.navigate('LeaveRequest'),
-  toOvertimeRequest: (navigation) => navigation.navigate('OvertimeRequest'),
-  toWorkSchedule: (navigation) => navigation.navigate('WeeklyScheduleScreen'),
-  toProfile: (navigation) => navigation.navigate('Profile'),
-  toNotifications: (navigation) => navigation.navigate('NotificationScreen'),
-  
+  toAttendance: navigation => navigation.navigate('Attendance'),
+  toLeaveRequest: navigation => navigation.navigate('LeaveRequest'),
+  toOvertimeRequest: navigation => navigation.navigate('OvertimeRequest'),
+  toWorkSchedule: navigation => navigation.navigate('WeeklyScheduleScreen'),
+  toProfile: navigation => navigation.navigate('Profile'),
+  toNotifications: navigation => navigation.navigate('NotificationScreen'),
+
   // Admin features
-  toAdminLeave: (navigation) => navigation.navigate('AdminLeaveScreen'),
-  toAdminOvertime: (navigation) => navigation.navigate('AdminOTScreen'),
-  toAdminSchedule: (navigation) => navigation.navigate('AdminCreateScheduleScreen'),
-  
+  toAdminLeave: navigation => navigation.navigate('AdminLeaveScreen'),
+  toAdminOvertime: navigation => navigation.navigate('AdminOTScreen'),
+  toAdminSchedule: navigation =>
+    navigation.navigate('AdminCreateScheduleScreen'),
+
   // Auth flows
-  toLogin: (navigation) => navigateReplace(navigation, 'LoginScreen'),
-  toMain: (navigation) => navigateReplace(navigation, 'MainScreen'),
-  toAdmin: (navigation) => navigateReplace(navigation, 'AdminScreen'),
+  toLogin: navigation => navigateReplace(navigation, 'LoginScreen'),
+  toMain: navigation => navigateReplace(navigation, 'MainScreen'),
+  toAdmin: navigation => navigateReplace(navigation, 'AdminScreen'),
 };
 
 /**
@@ -141,29 +160,28 @@ export const FeatureNavigation = {
  * @param {Object} navigation - Navigation object
  * @returns {Object} - Object chứa các navigation handlers
  */
-export const createNavigationHandlers = (navigation) => {
+export const createNavigationHandlers = navigation => {
   return {
-    navigateBasedOnRole: (userRole, onUnknownRole) => 
+    navigateBasedOnRole: (userRole, onUnknownRole) =>
       navigateBasedOnRole(navigation, userRole, onUnknownRole),
-    
-    navigateToDetail: (screenName, params, paramKey) => 
+
+    navigateToDetail: (screenName, params, paramKey) =>
       navigateToDetail(navigation, screenName, params, paramKey),
-    
-    navigateToLeaveDetail: (leaveRequest, isAdmin) => 
+
+    navigateToLeaveDetail: (leaveRequest, isAdmin) =>
       navigateToLeaveDetail(navigation, leaveRequest, isAdmin),
-    
-    navigateToOvertimeDetail: (overtimeRequest, isAdmin) => 
+
+    navigateToOvertimeDetail: (overtimeRequest, isAdmin) =>
       navigateToOvertimeDetail(navigation, overtimeRequest, isAdmin),
-    
-    navigateReplace: (screenName, params) => 
+
+    navigateReplace: (screenName, params) =>
       navigateReplace(navigation, screenName, params),
-    
-    navigateBack: (fallbackScreen) => 
-      navigateBack(navigation, fallbackScreen),
-    
-    resetAndNavigate: (screenName, params) => 
+
+    navigateBack: fallbackScreen => navigateBack(navigation, fallbackScreen),
+
+    resetAndNavigate: (screenName, params) =>
       resetAndNavigate(navigation, screenName, params),
-    
+
     // Feature shortcuts
     features: {
       toAttendance: () => FeatureNavigation.toAttendance(navigation),

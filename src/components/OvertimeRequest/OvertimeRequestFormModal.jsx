@@ -8,6 +8,7 @@ import {
   Modal,
   Platform, // Import Platform for OS-specific logic
   Alert,
+  TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import CustomTextInput from '../../components/CustomTextInput';
@@ -45,7 +46,7 @@ const OvertimeRequestFormModal = ({ isModalVisible, onClose, onSubmit, overtimeR
   const onStartTimeChange = (event, selectedTime) => {
     setShowStartTimePicker(false);
     if (selectedTime) {
-      setStartTime(selectedTime.toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'}));
+      setStartTime(selectedTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
     }
   };
 
@@ -78,11 +79,11 @@ const OvertimeRequestFormModal = ({ isModalVisible, onClose, onSubmit, overtimeR
       Alert.alert('Lỗi', 'Giờ kết thúc phải sau giờ bắt đầu.');
       return;
     }
-    if(!reason){
+    if (!reason) {
       Alert.alert('Lỗi', 'Vui lòng nhập lý do.');
       return;
     }
-    if(!project){
+    if (!project) {
       Alert.alert('Lỗi', 'Vui lòng nhập tên dự án.');
       return;
     }
@@ -94,7 +95,7 @@ const OvertimeRequestFormModal = ({ isModalVisible, onClose, onSubmit, overtimeR
       project,
     };
     // nếu có id thì truyền id + newOvertimeRequest, không thì chỉ truyền newOvertimeRequest
-    if(overtimeRequest?._id){
+    if (overtimeRequest?._id) {
       onSubmit(overtimeRequest._id, newOvertimeRequest);
       onClose();
     } else {
@@ -147,7 +148,7 @@ const OvertimeRequestFormModal = ({ isModalVisible, onClose, onSubmit, overtimeR
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{overtimeRequest?._id ? 'Chỉnh sửa yêu cầu' : 'Tạo yêu cầu'}</Text>
+            <Text style={styles.modalTitle}>{overtimeRequest?._id ? 'Chỉnh sửa yêu cầu OT' : 'Tạo yêu cầu OT'}</Text>
             <TouchableOpacity onPress={onClose}>
               <Icon name="close" size={24} color="#666666" />
             </TouchableOpacity>
@@ -173,45 +174,51 @@ const OvertimeRequestFormModal = ({ isModalVisible, onClose, onSubmit, overtimeR
             )}
 
             <View style={styles.timeContainer}>
-              <CustomTextInput
-                label="Giờ bắt đầu"
-                placeholder="HH:mm"
-                value={startTime}
-                onPress={() => setShowStartTimePicker(true)}
-                editable={false} // Make it not directly editable
-              />
-
-              {showStartTimePicker && (
-                <DateTimePicker
-                  testID="startTimePicker"
-                  value={startTime ? new Date(`2000-01-01T${startTime}`) : new Date()}
-                  mode="time"
-                  is24Hour={true}
-                  display="spinner"
-                  onChange={onStartTimeChange}
+              <View style={{ flexDirection: 'row' }}>
+                <CustomTextInput
+                  label="Giờ bắt đầu"
+                  placeholder="00:00"
+                  value={startTime}
+                  onPress={() => setShowStartTimePicker(true)}
+                  editable={false} // Make it not directly editable
                 />
-              )}
 
-              <CustomTextInput
-                label="Giờ kết thúc"
-                placeholder="HH:mm"
-                value={endTime}
-                onPress={() => setShowEndTimePicker(true)}
-                editable={false} // Make it not directly editable
-                disabled={!startTime}
-              />
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: 8, marginTop: 10 }}>
+                  <Text style={{ color: '#666666' }}>–</Text>
+                </View>
 
-              {showEndTimePicker && (
-                <DateTimePicker
-                  testID="endTimePicker"
-                  value={endTime ? new Date(`2000-01-01T${endTime}`) : new Date()}
-                  mode="time"
-                  is24Hour={true}
-                  display="spinner"
-                  onChange={onEndTimeChange}
+                <CustomTextInput
+                  label="Giờ kết thúc"
+                  placeholder="00:00"
+                  value={endTime}
+                  onPress={() => setShowEndTimePicker(true)}
+                  editable={false} // Make it not directly editable
                 />
-              )}
+              </View>
             </View>
+
+
+            {showStartTimePicker && (
+              <DateTimePicker
+                testID="startTimePicker"
+                value={startTime ? new Date(`2000-01-01T${startTime}`) : new Date()}
+                mode="time"
+                is24Hour={true}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onStartTimeChange}
+              />
+            )}
+
+            {showEndTimePicker && (
+              <DateTimePicker
+                testID="endTimePicker"
+                value={endTime ? new Date(`2000-01-01T${endTime}`) : new Date()}
+                mode="time"
+                is24Hour={true}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onEndTimeChange}
+              />
+            )}
 
             <CustomTextInput
               label="Dự án"
@@ -275,15 +282,13 @@ const styles = StyleSheet.create({
   },
   timeContainer: {
     flexDirection: 'row',
-    marginBottom: 20,
+    justifyContent: 'space-between',
   },
   datePickerInput: {
     marginBottom: 16,
   },
   timePickerInput: {
     flex: 1,
-    marginRight: 8,
-    marginLeft: 8,
   },
   summaryCard: {
     backgroundColor: '#FFFFFF',

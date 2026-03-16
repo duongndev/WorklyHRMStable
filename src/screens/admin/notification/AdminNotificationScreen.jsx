@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -29,6 +29,7 @@ const AdminNotificationScreen = () => {
   const [searchText, setSearchText] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const isFetchingRef = useRef(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [newNotification, setNewNotification] = useState({
@@ -53,23 +54,18 @@ const AdminNotificationScreen = () => {
     { label: 'Phòng Marketing', value: 'Marketing' },
   ];
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  useEffect(() => {
-    filterNotifications();
-  }, [searchText, notifications]);
-
-  const fetchNotifications = async (page = 1, isRefresh = false) => {
-    if (loading) return;
-    
+  const fetchNotifications = useCallback(async (page = 1, isRefresh = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setLoading(true);
     try {
       const response = await getAllNotificationsApi(page, 20);
       if (response.success) {
-        const newNotifications = isRefresh ? response.data.notifications : [...notifications, ...response.data.notifications];
-        setNotifications(newNotifications);
+        setNotifications(prev =>
+          isRefresh
+            ? response.data.notifications
+            : [...prev, ...response.data.notifications],
+        );
         setHasMore(response.data.hasMore);
         setCurrentPage(page);
       }
@@ -78,10 +74,11 @@ const AdminNotificationScreen = () => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      isFetchingRef.current = false;
     }
-  };
+  }, []);
 
-  const filterNotifications = () => {
+  const filterNotifications = useCallback(() => {
     if (!searchText.trim()) {
       setFilteredNotifications(notifications);
     } else {
@@ -91,7 +88,15 @@ const AdminNotificationScreen = () => {
       );
       setFilteredNotifications(filtered);
     }
-  };
+  }, [notifications, searchText]);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    filterNotifications();
+  }, [filterNotifications]);
 
   const onRefresh = () => {
     setRefreshing(true);

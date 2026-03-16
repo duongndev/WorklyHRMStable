@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import cacheManager, { CACHE_TTL } from '../utils/cacheManager';
 
@@ -21,13 +21,18 @@ export const useApiCache = ({
   const hasFetched = useRef(false);
   const lastParams = useRef(null);
 
-  // Tạo cache key
-  const cacheKey = cacheManager.createKey(asyncThunk.typePrefix, params);
+  const paramsKey = useMemo(() => JSON.stringify(params), [params]);
+  const dependenciesKey = useMemo(
+    () => JSON.stringify(dependencies),
+    [dependencies],
+  );
 
-  // Kiểm tra xem params có thay đổi không
-  const paramsChanged = JSON.stringify(params) !== JSON.stringify(lastParams.current);
+  const cacheKey = useMemo(
+    () => cacheManager.createKey(asyncThunk.typePrefix, params),
+    [asyncThunk.typePrefix, params],
+  );
 
-  const fetchData = async (forceRefresh = false) => {
+  const fetchData = useCallback(async (forceRefresh = false) => {
     try {
       setLoading(true);
       setError(null);
@@ -68,23 +73,16 @@ export const useApiCache = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [asyncThunk, cacheKey, dispatch, params, skipCache, ttl]);
 
-  // Auto fetch khi component mount hoặc dependencies thay đổi
   useEffect(() => {
-    if (!enabled) return;
-
-    const shouldFetch = 
-      !hasFetched.current || 
-      paramsChanged || 
-      dependencies.some((dep, index) => dep !== dependencies[index]);
-
-    if (shouldFetch) {
-      fetchData();
-      hasFetched.current = true;
-      lastParams.current = params;
+    if (!enabled) {
+      return;
     }
-  }, [enabled, ...dependencies]);
+    fetchData();
+    hasFetched.current = true;
+    lastParams.current = params;
+  }, [dependenciesKey, enabled, fetchData, params, paramsKey]);
 
   // Refresh function
   const refresh = () => fetchData(true);
@@ -111,7 +109,7 @@ export const useHomeScreenData = () => {
   const dispatch = useDispatch();
   const [initialized, setInitialized] = useState(false);
 
-  const initializeHomeData = async () => {
+  const initializeHomeData = useCallback(async () => {
     if (initialized) return;
 
     try {
@@ -141,11 +139,11 @@ export const useHomeScreenData = () => {
     } catch (error) {
       console.error('Error initializing home screen data:', error);
     }
-  };
+  }, [dispatch, initialized]);
 
   useEffect(() => {
     initializeHomeData();
-  }, []);
+  }, [initializeHomeData]);
 
   return {
     initialized,

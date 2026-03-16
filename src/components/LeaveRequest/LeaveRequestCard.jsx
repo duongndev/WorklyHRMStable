@@ -19,6 +19,7 @@ const LeaveRequestCard = ({
         <View>
           <View style={styles.requestHeader}>
             <Text style={styles.requestType}>{item.leaveType}</Text>
+
             <View
               style={[
                 styles.statusBadge,
